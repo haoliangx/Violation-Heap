@@ -16,6 +16,6 @@ typedef struct _v_heap
 {
 	int size;
 	struct _node *root_list;
-}v_heap_t;
+}heap_t;
 
 #endif
