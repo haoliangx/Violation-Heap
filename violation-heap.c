@@ -13,25 +13,6 @@ do {					\
 }while(0)
 
 /*
-
-typedef struct _node
-{
-	key_t key;
-	int rank;
-	struct _node *next;
-	struct _node *prev;
-	struct _node *child;
-}node_t;
-
-typedef struct _v_heap
-{
-	int size;
-	struct _node *root_list;
-}heap_t;
-
-*/
-
-/*
 heap_t *meld(heap_t *heap_a, heap_t *heap_b)
 {
 
@@ -39,97 +20,168 @@ heap_t *meld(heap_t *heap_a, heap_t *heap_b)
 
 node_t *find_min(heap_t *heap)
 {
-	
+
 }
 */
 
-/* Check if this node is active or not */
+void join_list(node_t **list_a, node_t **list_b);
+
+int ceiling(float num)
+{
+	if(num == (int)num)
+		return (int)num;
+	if(num > 0)
+		return (int)(num + 1);
+	else if(num < 0)
+		return (int)(num - 1);
+	else
+		return 0;
+}
+
+/* Check if this node is active or not and find its parent */
 int is_active(node_t *node, node_t **p)
 {
-	node_t *parent = *p;
-	int is_active = 3;
-	while(parent->prev->child != parent)
-	{
+	node_t *parent = node;
+	int active = 3;
+	if(node->prev == NULL)
+		return 0;
+	while(parent->prev->child != parent) {
 		parent = parent->prev;
-		is_active--;
+		active--;
 	}
-	return active;
+	*p = parent;
+	return active > 0 ? 1 : 0;
+}
+
+/* Re-calculate node's rank */
+int rank_update(node_t *node)
+{
+	int old_rank = node->rank;
+
+	/* Get node's active children */
+	node_t *z1 = NULL, *z2 = NULL;
+	if(node->child) {
+		z1 = node->child;
+		z2 = node->child->next;
+	}
+
+	/* Update the rank */
+	float rz1 = z1 ? z1->rank : -1;
+	float rz2 = z2 ? z2->rank : -1;
+	node->rank = ceiling((rz1 + rz2) / 2) + 1;
+
+	/* Return the old rank */
+	return old_rank;
 }
 
 void decrease_key(heap_t *heap, node_t *node, key_t new_key)
 {
 	node_t *parent = NULL;
-	
+	node_t *prev = NULL, *head = NULL, *tail = NULL;
+
 	/* Check if it is unnecessary to decrease key */
 	if(node->key <= new_key)
 		return;
 	else
-		node->key = new_key;	
-	
+		node->key = new_key;
+
 	/* If node is a root and the new key is less than the old minimum
 		switch the root_list pointer and return */
-	if(node->prev == NULL && node->key < heap->root_list->key)
-	{
-		join_list(&heap->root_list, &node);
+	if(node->prev == NULL && node->key < heap->root_list->key) {
+		/* Break the root_list from node */
+		prev = heap->root_list;
+		while(prev->next != node)
+			prev = prev->next;
+		prev->next = NULL;
+
+		/* Point root_list to node */
+		head = heap->root_list;
+		heap->root_list = node;
+
+		/* Attach the list to the end of node */
+		tail = node;
+		while(tail->next != NULL)
+			tail = tail->next;
+		tail->next = head;
+
 		return;
 	}
-	
-	/* If node is non-active or if node is active and the key is not 
-		smaller than its parent, return. Otherwise, modify forest 
+
+	/* If node is non-active, or, if node is active and the key is not
+		smaller than its parent, return. Otherwise, modify forest
 		strcuture and propagate rank update to upper levels */
 	if(is_active(node, &parent))
-	{
 		if(parent->key <= node->key)
 			return;
-		else
-		{
-			
+		else {
+			/* Recalculate rank and propagate the update */
+			int old_rank = rank_update(node);
+			node_t *curr = node;
+			while(old_rank > curr->rank && is_active(curr, &parent)) {
+				old_rank = rank_update(parent);
+				curr = parent;
+
+				/* Stop if reached the root */
+				if(curr->prev = NULL)
+					break;
+			}
+
+			/* Cut node from the tree */
+			if(node->prev->child == node) {
+				node->prev->child = node->next;
+				if(node->next)
+					node->next->prev = node->prev;
+			} else {
+				node->prev->next = node->next;
+				if(node->next)
+					node->next->prev = node->prev;
+			}
+			node->next = NULL;
+			node->prev = NULL;
+
+			/* Attach node to the root_list */
+			join_list(&heap->root_list, &node);
 		}
-	}
-	
 }
 
 void print_heap(heap_t *heap)
 {
 	int level = 0, len = 1, tlen = 0, i;
-	
+
 	node_t **list = (node_t **)calloc(heap->size, sizeof(node_t *));
 	node_t **tlist = (node_t **)calloc(heap->size, sizeof(node_t *));
 	node_t *node = NULL;
-	
-	printf("\n***** Heap size = %d *****\n", heap->size);
+
+	printf("\n******** Heap size = %-5d ********\n", heap->size);
 	list[0] = heap->root_list;
-	while(len > 0)
-	{
+	while(len > 0) {
 		printf(">>> %d Level node\n", level++);
-		for(i = 0; i < len; i++)
-		{
+		for(i = 0; i < len; i++) {
 			for(node = list[i]; node != NULL; node = node->next) {
-				printf("\t%d", node->key);
+				printf("\t%-5d ", node->key);
 				if(node->prev == NULL)
-					printf("(R)");
+					printf("(R)\t");
 				else if(node->prev->child == node)
-					printf("(FC-%d)", node->prev->key);
-				else
-				{
+					printf("(F-%d)\t", node->prev->key);
+				else {
 					node_t *temp = node;
 					while(temp->prev->child != temp)
 						temp = temp->prev;
-					printf("(C-%d)", temp->prev->key);
+					printf("(C-%d)\t", temp->prev->key);
 				}
-				if(node->child)
-				{
-					printf("(HC)");
+				if(node->child) {
+					printf("(H)\t");
 					tlist[tlen++] = node->child;
-				}
-				printf("\n");
+				} else
+					printf("  \t");
+				printf("(%d)\n", node->rank);
 			}
 		}
 		memcpy(list, tlist, tlen * sizeof(node_t *));
 		len = tlen;
 		tlen = 0;
 	}
-	printf("*************************\n");
+	printf("***********************************\n");
 }
 
 /* Make a heap and return its pointer */
@@ -164,7 +216,7 @@ void join_list(node_t **list_a, node_t **list_b)
 {
 	node_t *next, *curr;
 	int flag = 0;
-	
+
 	/* Handle corner cases */
 	if(*list_b == NULL)
 		return;
@@ -203,7 +255,7 @@ void join_list(node_t **list_a, node_t **list_b)
 }
 
 /* Insert a new key into the heap */
-void *insert(heap_t *heap, key_t key)
+node_t *insert(heap_t *heap, key_t key)
 {
 	/* Make a new node */
 	node_t *node = make_node(key);
@@ -213,6 +265,8 @@ void *insert(heap_t *heap, key_t key)
 
 	/* Increase the heap size */
 	heap->size++;
+
+	return node;
 }
 
 /* Link z1 to the child list of z */
@@ -296,12 +350,12 @@ void consolidate(heap_t *heap)
 
 	/* Rebuild the root list from A_list */
 	heap->root_list = NULL;
-	
+
 	/* For node(s) at each rank */
 	for(i = 0; i < 2 * heap->size; i+=2) {
 		node_t *p1 = A_list[i];
 		node_t *p2 = A_list[i + 1];
-		
+
 		/* Add them into the root list */
 		join_list(&heap->root_list, &p1);
 		join_list(&heap->root_list, &p2);
@@ -320,10 +374,10 @@ node_t *extract_min(heap_t *heap)
 		/* Remove the min_node and decrement the heap size */
 		heap->root_list = min_node->next;
 		heap->size--;
-		
+
 		/* Attach all its children to the root_list */
 		join_list(&heap->root_list, &child_list);
-		
+
 		/* Consolidate the root_list*/
 		consolidate(heap);
 	}
@@ -336,27 +390,41 @@ node_t *extract_min(heap_t *heap)
 
 int main()
 {
-	int i;
+	int i, j;
 	srand(time(0));
-	
+
+	node_t *array[NUM] = {NULL};
+
 	heap_t *heap = make_heap();
-	
+
 	printf("Insert: \n");
 	for(i = 0; i < NUM; i++) {
-		int n = rand()%2000;
-		insert(heap, n);
+		int n = rand()%2000 + 1;
+		array[i] = insert(heap, n);
 		printf("%d\n", n);
-		fflush(stdout);
 		print_heap(heap);
 	}
-	printf("\nExtract\n");
 	for(i = 0; i < NUM; i++) {
-		node_t *min = extract_min(heap);
-		if(min)
-			printf("%d\n", min->key);
-		else
-			printf("NULL\n");
+		node_t *d_node = NULL;
+		do {
+			d_node = array[rand()%NUM];
+		} while(d_node == NULL);
+		int new_key = rand()%1000;
+		printf("\nDecrease %d to %d\n",d_node->key, d_node->key - new_key);
+		decrease_key(heap, d_node, d_node->key - new_key);
 		print_heap(heap);
+		if(rand()%2 == 1) {
+			printf("\nExtract\n");
+			node_t *min = extract_min(heap);
+			for(j = 0; j<NUM; j++)
+				if(array[j] == min)
+					array[j] = NULL;
+			if(min)
+				printf("%d\n", min->key);
+			else
+				printf("NULL\n");
+			print_heap(heap);
+		}
 	}
 	printf("\n");
 }
