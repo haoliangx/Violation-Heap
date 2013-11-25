@@ -392,8 +392,12 @@ void decrease_key(heap_t *heap, node_t *node, key_t new_key)
 	if(node->prev == NULL && node->key < heap->root_list->key) {
 		/* Break the root_list from node */
 		prev = heap->root_list;
-		while(prev->next != node)
+		while(prev->next != node) {
+#ifdef TIMING
+			decrease_step++;
+#endif
 			prev = prev->next;
+		}
 		prev->next = NULL;
 
 		/* Point root_list to node */
@@ -402,8 +406,12 @@ void decrease_key(heap_t *heap, node_t *node, key_t new_key)
 
 		/* Attach the list to the end of node */
 		tail = node;
-		while(tail->next != NULL)
+		while(tail->next != NULL) {
+#ifdef TIMING
+			decrease_step++;
+#endif
 			tail = tail->next;
+		}
 		tail->next = head;
 
 		return;
@@ -420,6 +428,9 @@ void decrease_key(heap_t *heap, node_t *node, key_t new_key)
 			old_rank = rank_update(node);
 			curr = node;
 			while(old_rank > curr->rank && is_active(curr, &parent)) {
+#ifdef TIMING
+				decrease_step++;
+#endif
 				old_rank = rank_update(parent);
 				curr = parent;
 
