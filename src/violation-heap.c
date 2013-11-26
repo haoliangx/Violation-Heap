@@ -215,13 +215,11 @@ void consolidate(heap_t *heap)
 #ifdef TIMING
 			extract_step++;
 #endif
-			/* Sort z, z1, z2 */
+			/* Make sure the key of z is the minimum */
 			if(z->key > z1->key)
 				SWAP_NODE(z, z1);
 			if(z->key > z2->key)
 				SWAP_NODE(z, z2);
-			if(z1->key > z2->key)
-				SWAP_NODE(z1, z2);
 
 			/* Link z1 and z2 to z */
 			link(z, z1);
