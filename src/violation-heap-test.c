@@ -11,18 +11,15 @@ int main(int argc, char *argv[])
 	int i, j, num, new_key, delta;
 	node_t *d_node;
 
-	/* Check usage */
-	if(argc != 2) {
-		fprintf(stderr, "Usage: %s SIZE\n", argv[0]);
-		exit(EXIT_FAILURE);
-	}
+	/* Set the problem size */
+	if(argc == 2)
+		num = atoi(argv[1]);
+	else
+		num = 10000;
 
 	/* Initial random number generator */
 	srand(time(0));
-
-	/* Set the problem size */
-	num = atoi(argv[1]);
-
+	
 	/* Allocate memory space to store all the nodes */
 	node_t **current_key = calloc(num, sizeof(node_t *));
 
@@ -32,28 +29,44 @@ int main(int argc, char *argv[])
 	/* Insert num random numbers from 5000-7000
 		and store them in current_key */
 	for(i = 0; i < num; i++)
-		current_key[i] = insert(heap, rand()%2000 + 5000);
+		current_key[i] = insert(heap, rand() % 2000 + 5000);
 
 	/* Decrease key and extract min for num/2 times */
 	for(i = 0; i < num/2; i++) {
 		/* Find a random non-empty node with its key > 20 */
 		do {
+			d_node = NULL;
 			do {
 				d_node = current_key[rand() % num];
 			} while(d_node == NULL);
-		} while(d_node->key <=20);
+		} while(d_node->key <= 20);
 
 		/* Generate a random value to decrease */
 		delta = rand() % 20;
-
+		
 		/* Decrease key for the random-chosen node */
 		decrease_key(heap, d_node, d_node->key - delta);
-
+#ifdef VERIFY
+		key_t min_key = 10000;
+		for(j = 0; j < num; j++)
+		{
+		    if(current_key[j] != NULL)
+		    {
+		        node_t *t = current_key[j];
+		        if(t->key < min_key)
+		            min_key = t->key;
+		    }
+		}
+#endif
 		/* Extract mininum */
 		node_t *min = extract_min(heap);
-
+		
+#ifdef VERIFY
+		if(min->key != min_key)
+		    printf("#ERROR: Actual min is %d, but extracted min is %d \n", min_key, min->key);
+#endif
 		/* Mark the corresponding slot for extracted node to be empty */
-		for(j = 0; j<num; j++)
+		for(j = 0; j < num; j++)
 			if(current_key[j] == min)
 				current_key[j] = NULL;
 

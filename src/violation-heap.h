@@ -2,6 +2,7 @@
 #define VIOLATION_HEAP_HEADER
 
 #define TIMING
+#define VERIFY
 
 #define SWAP_NODE(a, b) 		\
 do {					\
